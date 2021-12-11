@@ -7,16 +7,19 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
 class Authoring():
+    """
+    Class for handling the process of creating files and establishing the autosaving process
+    """
     def __init__(self,server_url):
-        self.alias = None
         self.server_url = server_url
+        # To be assigned when authentication is done
+        self.source_folder = None
+        self.release_folder = None
+        self.alias = None
         self.token = None
         self.file_records = {}
         self.assignment = None
         self.headers = {}
-
-        self.source_folder = None
-        self.release_folder = None
 
     def auth(self, access_token):
 
