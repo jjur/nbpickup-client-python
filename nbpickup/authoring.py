@@ -110,6 +110,9 @@ class Authoring():
 
     def upload_file(self, file, directory, private=1):
         """Uploads new file to the nbpickup server"""
+        # Skip files starting the name with dot
+        if file[0] == ".":
+            return False
         files = {"file": open(directory+"/"+file, "rb")}
         values = {"filename":file,
                   "path":directory,
@@ -122,6 +125,9 @@ class Authoring():
 
     def update_file(self, file, directory):
         """Uploads new file to the nbpickup server"""
+        # Skip files starting the name with dot
+        if file[0] == ".":
+            return False
         files = {"file": open(directory + "/" + file, "rb")}
         values = {"filename": file,
                   "path": directory}
@@ -156,7 +162,7 @@ class AutoSaveEventHandler(FileSystemEventHandler):
         print("Created %s: %s", what, event.src_path)
         path = "/".join(event.src_path.split("/")[:-1])
         filename = event.src_path.split("/")[-1]
-        self.nbpickup.upload_file(path, filename, self.private)
+        self.nbpickup.upload_file(filename, path, self.private)
 
     def on_deleted(self, event):
         super().on_deleted(event)
@@ -172,4 +178,4 @@ class AutoSaveEventHandler(FileSystemEventHandler):
 
         path = "/".join(event.src_path.split("/")[:-1])
         filename = event.src_path.split("/")[-1]
-        self.nbpickup.update_file(path, filename)
+        self.nbpickup.update_file(filename,path)
