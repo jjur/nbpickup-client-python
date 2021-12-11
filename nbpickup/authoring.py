@@ -159,10 +159,12 @@ class AutoSaveEventHandler(FileSystemEventHandler):
         super().on_created(event)
 
         what = 'directory' if event.is_directory else 'file'
+
         print("Created %s: %s", what, event.src_path)
-        path = "/".join(event.src_path.split("/")[:-1])
-        filename = event.src_path.split("/")[-1]
-        self.nbpickup.upload_file(filename, path, self.private)
+        if not event.is_directory:
+            path = "/".join(event.src_path.split("/")[:-1])
+            filename = event.src_path.split("/")[-1]
+            self.nbpickup.upload_file(filename, path, self.private)
 
     def on_deleted(self, event):
         super().on_deleted(event)
@@ -175,7 +177,7 @@ class AutoSaveEventHandler(FileSystemEventHandler):
 
         what = 'directory' if event.is_directory else 'file'
         print("Modified %s: %s", what, event.src_path)
-
-        path = "/".join(event.src_path.split("/")[:-1])
-        filename = event.src_path.split("/")[-1]
-        self.nbpickup.update_file(filename,path)
+        if not event.is_directory:
+            path = "/".join(event.src_path.split("/")[:-1])
+            filename = event.src_path.split("/")[-1]
+            self.nbpickup.update_file(filename,path)
