@@ -2,9 +2,29 @@ import requests
 import os
 import re
 import asyncio
+import logging
 
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
+
+# Setting up the logging
+logger = logging.getLogger(__name__)
+
+log_file = logging.FileHandler("nbpickup.log")
+log_console = logging.StreamHandler()
+
+log_file.setLevel(logging.DEBUG)
+log_console.setLevel(logging.WARNING)
+
+log_file.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+log_console.setFormatter(logging.Formatter('%(name)s - %(levelname)s - %(message)s'))
+
+logger.addHandler(log_file).addHandler(log_console)
+
+def get_path_and_filename(full_path):
+    path = "/".join(full_path.split("/")[:-1])
+    filename = full_path.split("/")[-1]
+    return path,filename
 
 class Authoring():
     """
@@ -20,6 +40,7 @@ class Authoring():
         self.file_records = {}
         self.assignment = None
         self.headers = {}
+        logger.info("Authoring nbpickup.authoring initialized.")
 
     def auth(self, access_token):
 
@@ -34,7 +55,7 @@ class Authoring():
             self.alias = self.assignment["a_alias"]
 
             self.source_folder = os.getcwd() + "/source/" + self.alias
-            self.release_folder = os.getcwd() + "/release/" + self.alias
+            self.release_folder = os.getcwd() + "/release/"
 
             # Create these folders if does not exit:
             if not os.path.exists(self.source_folder):
@@ -44,7 +65,9 @@ class Authoring():
 
             print("Assignment Loaded:",self.assignment["a_name"])
         else:
-            raise Exception(response.raw)
+            logger.error("AUTH|Server responded with code "+str(response.status_code) + ": " + str(response.content))
+            print(response.content)
+            raise Exception(response.content)
 
 
     def get_files(self):
@@ -60,10 +83,12 @@ class Authoring():
 
                 self.download_file(file["file"], folder)
         else:
-            raise Exception(response.raw)
+            logger.error("GET_FILES|Server responded with code " + str(response.status_code) + ": " + str(response.content))
+            print(response.content)
+            raise Exception(response.content)
 
 
-    def download(self, file_id, location, filename=False):
+    def download_file(self, file_id, location, filename=False):
 
         # Make sure that the folder is available
         if not os.path.exists(location):
@@ -80,7 +105,8 @@ class Authoring():
             open(location + "/" + filename, 'wb').write(response.content)
             self.file_records[location + "/" + filename] = file_id
         else:
-            raise Exception(response.raw)
+            print(response.content)
+            #raise Exception(response.content)
 
     def autosave(self):
         global observer
@@ -108,33 +134,67 @@ class Authoring():
                 print(" ", sep="", end="")
 
 
+    def show_links(self):
+        try:
+            from IPython.display import display, Javascript, HTML, IFrame
+        except ImportError:
+            logger.error("Unable to load IPYthon library.")
+            return False
+
+        display(HTML(f"""<a id="btn_source_folder" target="_blank" href="../tree/source/{self.alias}" class="btn btn-primary">Open Assignment Folder</a>
+        <a id="btn_release_folder" target="_blank" href="../tree/release/{self.alias}" class="btn btn-primary">Open Student´s version Folder</a>
+        <a id="btn_nbgrader" target="_blank" href="../formgrader" class="btn btn-primary">Open nbgrader</a>"""))
+
+
     def upload_file(self, file, directory, private=1):
         """Uploads new file to the nbpickup server"""
         # Skip files starting the name with dot
-        if file[0] == ".":
+        if file[0] == "."  or "checkpoint" in file:
             return False
         files = {"file": open(directory+"/"+file, "rb")}
         values = {"filename":file,
                   "path":directory,
                   "assignment":self.assignment["a_id"],
-                  "private":private}
-        response = requests.post(self.server_url + "/API/upload_file/", files=files, data=values)
+                  "private":private,
+                  }
+        response = requests.post(self.server_url + "/API/upload_file", files=files, data=values, headers=self.headers)
         if response.status_code == 200:
             file_id = response.content
             self.file_records[directory + "/" + file] = file_id
 
+        else:
+            logger.error("UPLOAD_FILE|Server responded with code " + str(response.status_code) + ": " + str(response.content))
+
     def update_file(self, file, directory):
-        """Uploads new file to the nbpickup server"""
+        """Updates existing file on the nbpickup server"""
         # Skip files starting the name with dot
-        if file[0] == ".":
+        if file[0] == "." or "checkpoint" in file:
             return False
         files = {"file": open(directory + "/" + file, "rb")}
         values = {"filename": file,
                   "path": directory}
+
+        # Check if the file is already in our know directory
+        if directory + "/" + file not in self.file_records:
+            return self.upload_file(file,directory)
+
         file_id = self.file_records[directory + "/" + file]
-        response = requests.post(self.server_url + f"/API/update_file/{file_id}", files=files, data=values)
+        response = requests.post(self.server_url + f"/API/update_file/{file_id}", files=files, data=values, headers=self.headers)
         if response.status_code == 200:
             pass # Nice, updated
+
+        else:
+            logger.error(
+                "UPDATE_FILE|Server responded with code " + str(response.status_code) + ": " + str(response.content))
+
+    def move_file(self, old_location, new_location):
+        """Function to handle file movements. Mainly for bookkeeping purposes."""
+        directory, filename = get_path_and_filename(new_location)
+        if old_location not in self.file_records:
+            return self.upload_file(filename,directory)
+        else:
+            self.file_records[new_location] = self.file_records[old_location]
+            return self.update_file(filename, directory)
 
 
 class AutoSaveEventHandler(FileSystemEventHandler):
@@ -148,19 +208,22 @@ class AutoSaveEventHandler(FileSystemEventHandler):
         self.folder = folder
 
     def on_moved(self, event):
+        """Handles both rename and move events"""
         super().on_moved(event)
 
         what = 'directory' if event.is_directory else 'file'
-        print("Moved %s: from %s to %s", what, event.src_path,
-                         event.dest_path)
-        # TODO: Not implemented, probably not required
+        logger.info("Moved %s: from %s to %s" % (what, event.src_path, event.dest_path))
+
+        if not event.is_directory:
+            self.nbpickup.move_file(event.src_path,event.dest_path)
+
 
     def on_created(self, event):
         super().on_created(event)
 
         what = 'directory' if event.is_directory else 'file'
 
-        print("Created %s: %s", what, event.src_path)
+        logger.info("Created %s: %s" % (what, event.src_path))
         if not event.is_directory:
             path = "/".join(event.src_path.split("/")[:-1])
             filename = event.src_path.split("/")[-1]
@@ -170,13 +233,13 @@ class AutoSaveEventHandler(FileSystemEventHandler):
         super().on_deleted(event)
 
         what = 'directory' if event.is_directory else 'file'
-        print("Deleted %s: %s", what, event.src_path)
+        logger.info("Deleted %s: %s" % (what, event.src_path))
 
     def on_modified(self, event):
         super().on_modified(event)
 
         what = 'directory' if event.is_directory else 'file'
-        print("Modified %s: %s", what, event.src_path)
+        logger.info("Modified %s: %s" % (what, event.src_path))
         if not event.is_directory:
             path = "/".join(event.src_path.split("/")[:-1])
             filename = event.src_path.split("/")[-1]
