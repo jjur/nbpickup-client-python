@@ -125,7 +125,7 @@ class Authoring():
 
         observer.schedule(event_handler_source, self.source_folder, recursive=True)
         observer.schedule(event_handler_release, self.release_folder, recursive=True)
-        observer.schedule(event_handler_gradebook, "gradebook.db")
+        observer.schedule(event_handler_gradebook, os.path.join(os.getcwd(), "gradebook.db"))
         observer.start()
 
         loop = asyncio.get_event_loop()
@@ -216,6 +216,7 @@ class Authoring():
 
 
     def update_gradebook_file(self, filename, path):
+        """Performs preprocessing of gradebook file and then uploads Gradebook as file"""
         num_assignments, num_students = get_gradebook_content_stats(filename, path)
 
         metrics = {"stats_students": num_students,
@@ -225,9 +226,8 @@ class Authoring():
         return self.upload_file(filename,path, additional_data=metrics)
 
 
-
-
     def upload_gradebook_file(self, filename, path):
+        """Performs preprocessing of gradebook file and then uploads Gradebook as file"""
         num_assignments, num_students = get_gradebook_content_stats(filename, path)
 
         metrics = {"stats_students": num_students,
