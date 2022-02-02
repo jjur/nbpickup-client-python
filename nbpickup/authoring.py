@@ -221,7 +221,7 @@ class Authoring():
                    "stats_assignments": num_assignments,
                    "filetype":"gradebook"}
 
-        return self.update_file(filename,path, additional_data=metrics)
+        return self.upload_file(filename,path, additional_data=metrics)
 
 
 
