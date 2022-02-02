@@ -169,7 +169,7 @@ class Authoring():
                 values[key] = additional_data[key]
         response = requests.post(self.server_url + "/API/upload_file", files=files, data=values, headers=self.headers)
         if response.status_code == 200:
-            file_id = response.content
+            file_id = int(response.text)
             self.file_records[directory + "/" + file] = file_id
 
         else:
@@ -198,6 +198,7 @@ class Authoring():
         response = requests.post(self.server_url + f"/API/update_file/{file_id}", files=files, data=values,
                                  headers=self.headers)
         if response.status_code == 200:
+            logger.info("UPDATE_FILE| File autosaved" + str(file) + ": ")  # Nice, updated
             pass  # Nice, updated
 
         else:
