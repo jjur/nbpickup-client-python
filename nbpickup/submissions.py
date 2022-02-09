@@ -81,7 +81,7 @@ class Submissions():
             # We successfully obtained filename, therefore we can submit the notebook without any issues
             files = {'file': open(filename, 'rb')}
             values = {'email': self.email}
-            r = requests.post(self.server_url + "/Student_api/submit_one/" + assignment_alias, files=files, data=values)
+            r = requests.post(self.server_url + "/StudentAPI/submit_one/" + assignment_alias, files=files, data=values)
 
             if r.status_code == 200:
                 print("Assingment Submitted Successfully.")
