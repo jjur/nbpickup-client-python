@@ -1,14 +1,17 @@
-from .authoring import Authoring
+from nbpickup.authoring import Authoring
+from nbpickup.submissions import Submissions
 #from .authoring
-from .grading import *
+from nbpickup.grading import *
 
 # server_url
 server_url = "https://nbpickup.org"
 
 authoring = Authoring(server_url)
+submissions = Submissions(server_url)
 
 
 
 def change_server(server_url):
     """Updates server address for all future API Calls"""
     authoring.server_url = server_url
+    submissions.server_url = server_url
