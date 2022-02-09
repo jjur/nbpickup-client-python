@@ -46,3 +46,5 @@ def jupyter_file_location():
             if nn['kernel']['id'] == kernel_id:
                 relative_path = nn['notebook']['path']
                 return os.path.join(ss['notebook_dir'], relative_path)
+
+    return False

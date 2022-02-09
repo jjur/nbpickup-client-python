@@ -40,8 +40,10 @@ class Submissions():
         """Verifies if valid email is provided and sets it for future submission"""
         if (re.fullmatch(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', email)):
             self.email = email
+            return True
         else:
             print("Provided Email is not Valid")
+            return False
 
 
     def submit_ipynb(self, assignment_alias, autosave_timer = 5):
@@ -85,8 +87,10 @@ class Submissions():
                 print("Assingment Submitted Successfully.")
                 print(r.text)
             else:
+                print("Automatic Assignemnt Submission Faied. Reason:", r.text)
+                print("Please use the following form to submit instead:")
                 filename=False
-                pass
+
         if not filename:
             # Plan B
             src = self.server_url + "/student/submit_minimal/" + assignment_alias + "/" + urllib.parse.quote(self.email)
