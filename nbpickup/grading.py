@@ -3,6 +3,12 @@ import os
 import requests
 import json
 
+import asyncio
+import logging
+
+from watchdog.observers import Observer
+from nbpickup.EventHandlers.autosave_gradebook import GradebookAutoSaveEventHandler
+
 # Setting up the logging
 logger = logging.getLogger(__name__)
 
@@ -43,12 +49,15 @@ class Grading():
 
             self.source_folder = os.getcwd() + "/source/" + self.alias
             self.release_folder = os.getcwd() + "/release/"
+            self.submitted_folder = os.getcwd() + "/submitted/"+ self.alias
 
             # Create these folders if does not exit:
             if not os.path.exists(self.source_folder):
                 os.makedirs(self.source_folder)
             if not os.path.exists(self.release_folder):
                 os.makedirs(self.release_folder)
+            if not os.path.exists(self.submitted_folder):
+                os.makedirs(self.submitted_folder)
 
             print("Assignment Loaded:", self.assignment["a_name"])
         else:
@@ -56,20 +65,17 @@ class Grading():
             print(response.content)
             raise Exception(response.content)
 
-    def download_nbgrader_submissions(self, token=None, group=None, filename=None, folder=None):
+    def download_nbgrader_submissions(self, filename=None, folder=None):
 
-        if (filename == None):
-            filename = self.assignment
+        # if (filename == None):
+        #     filename = self.assignment
         if (folder == None):
-            folder = self.assignment
+            folder = self.alias
 
         print("Contacting data server")
         try:
-            if group == None:
-                r = requests.get(self.server_url + "/API/download_list/", headers=self.headers)
-            else:
-                r = requests.get(
-                    self.server_url + "/API/download_list/", headers=self.headers)
+            r = requests.get(
+                    self.server_url + "/API/download_submissions_list/", headers=self.headers)
         except:
             print("Failed to connect with the server, please check your internet connection")
             return False
@@ -87,24 +93,61 @@ class Grading():
         if not os.path.exists(os.getcwd() + "/submitted"):
             os.makedirs(os.getcwd() + "/submitted")
         for row in data:
+            username = row["username"].replace(" ", "_")
+
             # create user folder
-            if not os.path.exists(os.getcwd() + "/submitted/" + row["u_name"].replace(" ", "_")):
-                os.makedirs(os.getcwd() + "/submitted/" + row["u_name"].replace(" ", "_"))
+            if not os.path.exists(os.getcwd() + "/submitted/" + username):
+                os.makedirs(os.getcwd() + "/submitted/" + username)
             # create assignment folder
-            if not os.path.exists(os.getcwd() + "/submitted/" + row["u_name"].replace(" ", "_") + "/" + folder):
-                os.makedirs(os.getcwd() + "/submitted/" + row["u_name"].replace(" ", "_") + "/" + folder)
+            if not os.path.exists(os.getcwd() + "/submitted/" + username + "/" + folder):
+                os.makedirs(os.getcwd() + "/submitted/" + username + "/" + folder)
 
             # download file
-            url = self.server_url + "/uploads/" + row["s_filename"]
+            url = self.server_url + "/Student/get_submission/" + row["f_filename_internal"]
             r = requests.get(url, allow_redirects=True)
-            open(os.getcwd() + "/submitted/" + row["u_name"].replace(" ",
-                                                                     "_") + "/" + folder + "/" + filename + ".ipynb",
-                 'wb').write(r.content)
 
-            print("Assignment saved successfully")
+            if filename:
+                if filename[-5:]!="ipynb":
+                    filename = filename + ".ipynb"
+                else:
+                    filename = row["f_filename_original"]
 
-        print("Notebook are ready to be graded")
+            open(os.getcwd() + "/submitted/" + username + "/" + folder + "/" + filename, 'wb').write(r.content)
 
-    # def autosave()
+            print("Submission by {username} saved successfully")
+
+        print("All notebook are ready to be graded")
+
+    def autosave(self):
+        global observer
+
+        event_handler_gradebook = GradebookAutoSaveEventHandler(self)
+        observer = Observer()
+
+        observer.schedule(event_handler_gradebook, os.path.join(os.getcwd(), "gradebook.db"))
+        observer.start()
+
+        loop = asyncio.get_event_loop()
+        loop.create_task(self.async_autosaving())
+
+    async def async_autosaving(self):
+        global observer
+        await asyncio.sleep(1)
+        minutes = 0
+        while True:
+            await asyncio.sleep(60);
+            minutes += 1
+            if minutes % 10 == 0:
+                print(" ", sep="", end="")
+
+    def show_links(self):
+        try:
+            from IPython.display import display, Javascript, HTML, IFrame
+        except ImportError:
+            logger.error("Unable to load IPYthon library.")
+            return False
+
+        display(HTML(f"""<a id="btn_source_folder" target="_blank" href="../tree/submitted/{self.alias}" class="btn btn-primary">Open Submissions Folder</a>
+        <a id="btn_nbgrader" target="_blank" href="../formgrader" class="btn btn-primary">Open nbgrader</a>"""))
 
     # def save_results()
