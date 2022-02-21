@@ -254,8 +254,6 @@ class Grading():
         response = requests.post(self.server_url + "/API/upload_file", files=files, data=values, headers=self.headers)
         if response.status_code == 200:
             file_id = int(response.text)
-            self.file_records[directory + "/" + file] = file_id
-
         else:
             logger.error(
                 "UPLOAD_FILE|Server responded with code " + str(response.status_code) + ": " + str(response.content))

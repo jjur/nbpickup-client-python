@@ -29,7 +29,7 @@ def get_gradebook_grades(filename, path, assignment_alias, notebook_filenames):
             score_dict = {}
             for filename in notebook_filenames:
                 # Get all submissions
-                submissions = gb.notebook_submission_dicts(filename,assignment_alias)
+                submissions = gb.notebook_submission_dicts(filename.replace(".ipynb",""),assignment_alias)
 
 
                 for sub in submissions:
