@@ -54,7 +54,7 @@ class Grading():
 
             self.source_folder = os.getcwd() + "/source/" + self.alias
             self.release_folder = os.getcwd() + "/release/"
-            self.submitted_folder = os.getcwd() + "/submitted/"+ self.alias
+            self.submitted_folder = os.getcwd() + "/submitted/"
 
             # Create these folders if does not exit:
             if not os.path.exists(self.source_folder):
@@ -184,7 +184,7 @@ class Grading():
             logger.error("Unable to load IPYthon library.")
             return False
 
-        display(HTML(f"""<a id="btn_source_folder" target="_blank" href="../tree/submitted/{self.alias}" class="btn btn-primary">Open Submissions Folder</a>
+        display(HTML(f"""<a id="btn_source_folder" target="_blank" href="../tree/submitted/" class="btn btn-primary">Open Submissions Folder</a>
         <a id="btn_nbgrader" target="_blank" href="../formgrader" class="btn btn-primary">Open nbgrader</a>"""))
 
     def sync_grades(self):
