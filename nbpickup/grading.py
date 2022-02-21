@@ -172,7 +172,7 @@ class Grading():
         await asyncio.sleep(1)
         minutes = 0
         while True:
-            await asyncio.sleep(30);
+            await asyncio.sleep(60)
             minutes += 1
             self.sync_grades()
             if minutes % 20 == 0:

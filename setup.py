@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="nbpickup",
-    version="0.9.0",
+    version="0.9.1",
     author="Juraj Vasek",
     author_email="juraj.vasek@uni.minerva.edu",
     description="Library for collecting and distribution of coding assessments using nbgrader and Binder.",
