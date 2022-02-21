@@ -10,6 +10,7 @@ import logging
 from watchdog.observers import Observer
 from nbpickup.EventHandlers.autosave_gradebook import GradebookAutoSaveEventHandler
 from nbpickup.gradebook_tools import get_gradebook_grades
+from nbpickup.gradebook_tools import get_gradebook_content_stats
 
 # Setting up the logging
 logger = logging.getLogger(__name__)
@@ -224,4 +225,14 @@ class Grading():
         else:
             print(response.content)
             # raise Exception(response.content)
+
+    def upload_gradebook_file(self, filename, path):
+        """Performs preprocessing of gradebook file and then uploads Gradebook as file"""
+        num_assignments, num_students = get_gradebook_content_stats(filename, path)
+
+        metrics = {"stats_students": num_students,
+                   "stats_assignments": num_assignments,
+                   "filetype": "gradebook"}
+
+        return self.upload_file(filename, path, additional_data=metrics)
 
