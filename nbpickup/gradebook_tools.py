@@ -30,8 +30,6 @@ def get_gradebook_grades(filename, path, assignment_alias, notebook_filenames):
             for filename in notebook_filenames:
                 # Get all submissions
                 submissions = gb.notebook_submission_dicts(filename.replace(".ipynb",""),assignment_alias)
-
-
                 for sub in submissions:
                     if sub["student"] in score_dict:
                         score_dict[sub["student"]] += sub["score"]
