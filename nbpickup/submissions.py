@@ -84,10 +84,10 @@ class Submissions():
             r = requests.post(self.server_url + "/StudentAPI/submit_one/" + assignment_alias, files=files, data=values)
 
             if r.status_code == 200:
-                print("Assingment Submitted Successfully.")
-                print(r.text)
+                print("Assignment Submitted Successfully.")
+                print("Submission available on URL:", r.text)
             else:
-                print("Automatic Assignemnt Submission Faied. Reason:", r.text)
+                print("Automatic Assignment Submission Failed. Reason:", r.text)
                 print("Please use the following form to submit instead:")
                 filename=False
 
