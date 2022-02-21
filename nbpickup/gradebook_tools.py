@@ -20,3 +20,25 @@ def get_gradebook_content_stats(filename, path):
             return -1, -1
 
     return num_assignments, num_students
+
+def get_gradebook_grades(filename, path, assignment_alias, notebook_filenames):
+    try:
+        # Try reading absolute path
+        with Gradebook('sqlite:////' + os.path.join(path, filename)) as gb:
+
+            score_dict = {}
+            for filename in notebook_filenames:
+                # Get all submissions
+                submissions = gb.notebook_submission_dicts(filename,assignment_alias)
+
+
+                for sub in submissions:
+                    if sub["student"] in score_dict:
+                        score_dict[sub["student"]] += sub["score"]
+                    else:
+                        score_dict[sub["student"]] = sub["score"]
+
+            return score_dict
+
+    except (OperationalError, OE):
+        print("Gradebook.db reading failed.")

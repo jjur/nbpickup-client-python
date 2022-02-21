@@ -9,6 +9,7 @@ import logging
 
 from watchdog.observers import Observer
 from nbpickup.EventHandlers.autosave_gradebook import GradebookAutoSaveEventHandler
+from nbpickup.gradebook_tools import get_gradebook_grades
 
 # Setting up the logging
 logger = logging.getLogger(__name__)
@@ -35,6 +36,9 @@ class Grading():
         self.token = None
         self.alias = None
         self.headers = None
+
+        self.filenames = set()
+        self.last_seen_grades = None
 
     def auth(self, access_token):
 
@@ -83,6 +87,8 @@ class Grading():
         print("Parsing received data")
         try:
             data = json.loads(r.content)
+            self.submissions = data
+
         except:
             print("Failed to parse received data")
             print("RAW DATA:", data)
@@ -93,9 +99,12 @@ class Grading():
         # create submitted folder
         if not os.path.exists(os.getcwd() + "/submitted"):
             os.makedirs(os.getcwd() + "/submitted")
+
+        self.submission_ids = {}
         for row in data:
             username = row["username"].replace(" ", "_")
-
+            # Match submission IDs to usernames
+            self.submission_ids[username] = row["s_id"]
             # create user folder
             if not os.path.exists(os.getcwd() + "/submitted/" + username):
                 os.makedirs(os.getcwd() + "/submitted/" + username)
@@ -113,7 +122,7 @@ class Grading():
                     filename = filename + ".ipynb"
             else:
                 filename = row["f_filename_original"]
-
+            self.filenames.add(filename)
             open(os.getcwd() + "/submitted/" + username + "/" + folder + "/" + filename, 'wb').write(r.content)
 
             print(f"-> Submission by {username} downloaded successfully")
@@ -128,7 +137,9 @@ class Grading():
             open(os.getcwd() + "/gradebook.db", 'wb').write(response.content)
             print("Gradebook downloaded")
         elif response.status_code == 404:
-            print("Gradebook for does not exists. nbgrader might not work properly.")
+            print("Gradebook for does not exists. nbgrader might not work properly. Autosave disabled.")
+            autosave=False
+
 
         if download_source:
             response = requests.get(self.server_url + "/API/list_files", headers=self.headers)
@@ -154,13 +165,16 @@ class Grading():
         loop.create_task(self.async_autosaving())
 
     async def async_autosaving(self):
+        """Every 30 seconds asynchronously on background checks if there are any new scores saved in the gradebook.db.
+        If changes are detected, those scores are transfered to API"""
         global observer
         await asyncio.sleep(1)
         minutes = 0
         while True:
-            await asyncio.sleep(60);
+            await asyncio.sleep(30);
             minutes += 1
-            if minutes % 10 == 0:
+            self.sync_grades()
+            if minutes % 20 == 0:
                 print(" ", sep="", end="")
 
     def show_links(self):
@@ -173,7 +187,24 @@ class Grading():
         display(HTML(f"""<a id="btn_source_folder" target="_blank" href="../tree/submitted/{self.alias}" class="btn btn-primary">Open Submissions Folder</a>
         <a id="btn_nbgrader" target="_blank" href="../formgrader" class="btn btn-primary">Open nbgrader</a>"""))
 
-    # def save_results()
+    def sync_grades(self):
+        """Checks for change in grades within gradebook.db"""
+
+        grades = get_gradebook_grades("gradebook.db",os.getcwd(),self.alias,self.filenames)
+
+        # match grades to submission ids
+
+        matched = {}
+        for student in grades:
+            matched[self.submission_ids[student]] = grades[student]
+
+        matched_json = json.dumps(matched)
+
+        if matched_json != self.last_seen_grades:
+            self.last_seen_grades = matched_json
+            requests.post(self.server_url + "/API/upload_grades", data={"grades":matched_json},
+                                     headers=self.headers)
+
 
     def download_file(self, file_id, location, filename=False):
 

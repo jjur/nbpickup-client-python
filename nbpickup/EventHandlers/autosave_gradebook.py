@@ -54,4 +54,4 @@ class GradebookAutoSaveEventHandler(FileSystemEventHandler):
         if not event.is_directory:
             path = "/".join(event.src_path.split("/")[:-1])
             filename = event.src_path.split("/")[-1]
-            self.nbpickup.update_gradebook_file(filename, path)
+            self.nbpickup.upload_gradebook_file(filename, path)
