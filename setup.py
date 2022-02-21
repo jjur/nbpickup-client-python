@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="nbpickup",
-    version="0.6.2",
+    version="0.9.0",
     author="Juraj Vasek",
     author_email="juraj.vasek@uni.minerva.edu",
     description="Library for collecting and distribution of coding assessments using nbgrader and Binder.",
@@ -15,7 +15,7 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     license='MIT',
     python_requires='>=3',
-    install_requires=['requests', "ipykernel", "ipython", "watchdog, nbgrader"],
+    install_requires=['requests', "ipykernel", "ipython", "watchdog", "nbgrader"],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
