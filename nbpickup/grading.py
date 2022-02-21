@@ -221,7 +221,6 @@ class Grading():
                 filename = re.findall("filename=(.+)", d)[0]
 
             open(location + "/" + filename, 'wb').write(response.content)
-            self.file_records[location + "/" + filename] = file_id
         else:
             print(response.content)
             # raise Exception(response.content)
