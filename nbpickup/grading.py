@@ -236,3 +236,26 @@ class Grading():
 
         return self.upload_file(filename, path, additional_data=metrics)
 
+    def upload_file(self, file, directory, private=1, additional_data=None):
+        """Uploads new file to the nbpickup server"""
+        # Skip files starting the name with dot
+        if file[0] == "." or "checkpoint" in file:
+            return False
+        files = {"file": open(directory + "/" + file, "rb")}
+        values = {"filename": file,
+                  "path": directory,
+                  "assignment": self.assignment["a_id"],
+                  "private": private,
+                  "filetype": "file"}
+
+        if additional_data:
+            for key in additional_data:
+                values[key] = additional_data[key]
+        response = requests.post(self.server_url + "/API/upload_file", files=files, data=values, headers=self.headers)
+        if response.status_code == 200:
+            file_id = int(response.text)
+            self.file_records[directory + "/" + file] = file_id
+
+        else:
+            logger.error(
+                "UPLOAD_FILE|Server responded with code " + str(response.status_code) + ": " + str(response.content))
