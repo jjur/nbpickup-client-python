@@ -20,11 +20,12 @@ logger.setLevel(logging.DEBUG)
 class GradebookAutoSaveEventHandler(FileSystemEventHandler):
     """Captures and deals with autosaving of nbpickup files"""
 
-    def __init__(self, nbpickup_client, folder = "/"):
+    def __init__(self, nbpickup_client, folder="/", callback=False):
         super().__init__()
 
         self.nbpickup = nbpickup_client
         self.folder = folder
+        self.callback = callback
 
     def on_moved(self, event):
         """Handles both rename and move events"""
@@ -55,3 +56,7 @@ class GradebookAutoSaveEventHandler(FileSystemEventHandler):
             path = "/".join(event.src_path.split("/")[:-1])
             filename = event.src_path.split("/")[-1]
             self.nbpickup.upload_gradebook_file(filename, path)
+
+        # Callback for updating grades
+        if self.callback:
+            self.callback()

@@ -156,7 +156,7 @@ class Grading():
                     self.download_file(file["file"], folder)
 
         if autosave:
-            event_handler_gradebook = GradebookAutoSaveEventHandler(self)
+            event_handler_gradebook = GradebookAutoSaveEventHandler(self, callback=self.sync_grades)
             observer = Observer()
 
             observer.schedule(event_handler_gradebook, os.path.join(os.getcwd(), "gradebook.db"))
