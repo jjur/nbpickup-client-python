@@ -77,7 +77,14 @@ class Authoring():
             print(response.content)
             raise Exception(response.content)
 
-    def get_files(self):
+    def get_files(self, get_gradebook=True):
+
+        if get_gradebook:
+            response = requests.get(self.server_url + "/API/get_gradebook", headers=self.headers)
+            if response.status_code == 200:
+                open(os.getcwd() + "/gradebook.db" , 'wb').write(response.content)
+                print("Gradebook downloaded")
+
         response = requests.get(self.server_url + "/API/list_files", headers=self.headers)
 
         if response.status_code == 200:

@@ -2,6 +2,7 @@ import logging
 import os
 import requests
 import json
+import re
 
 import asyncio
 import logging
@@ -75,7 +76,7 @@ class Grading():
         print("Contacting data server")
         try:
             r = requests.get(
-                    self.server_url + "/API/download_submissions_list/", headers=self.headers)
+                    self.server_url + "/API/download_submission_list/", headers=self.headers)
         except:
             print("Failed to connect with the server, please check your internet connection")
             return False
@@ -102,6 +103,7 @@ class Grading():
             if not os.path.exists(os.getcwd() + "/submitted/" + username + "/" + folder):
                 os.makedirs(os.getcwd() + "/submitted/" + username + "/" + folder)
 
+
             # download file
             url = self.server_url + "/Student/get_submission/" + row["f_filename_internal"]
             r = requests.get(url, allow_redirects=True)
@@ -109,23 +111,44 @@ class Grading():
             if filename:
                 if filename[-5:]!="ipynb":
                     filename = filename + ".ipynb"
-                else:
-                    filename = row["f_filename_original"]
+            else:
+                filename = row["f_filename_original"]
 
             open(os.getcwd() + "/submitted/" + username + "/" + folder + "/" + filename, 'wb').write(r.content)
 
-            print("Submission by {username} saved successfully")
+            print(f"-> Submission by {username} downloaded successfully")
 
-        print("All notebook are ready to be graded")
+        print("---All notebooks are ready to be graded!---")
 
-    def autosave(self):
+    def download_gradebook(self, autosave=True, download_source=True):
         global observer
 
-        event_handler_gradebook = GradebookAutoSaveEventHandler(self)
-        observer = Observer()
+        response = requests.get(self.server_url + "/API/get_gradebook", headers=self.headers)
+        if response.status_code == 200:
+            open(os.getcwd() + "/gradebook.db", 'wb').write(response.content)
+            print("Gradebook downloaded")
+        elif response.status_code == 404:
+            print("Gradebook for does not exists. nbgrader might not work properly.")
 
-        observer.schedule(event_handler_gradebook, os.path.join(os.getcwd(), "gradebook.db"))
-        observer.start()
+        if download_source:
+            response = requests.get(self.server_url + "/API/list_files", headers=self.headers)
+
+            if response.status_code == 200:
+                files = response.json()
+                for file in files:
+                    if file["private"]:
+                        folder = self.source_folder
+                    else:
+                        folder = self.release_folder
+
+                    self.download_file(file["file"], folder)
+
+        if autosave:
+            event_handler_gradebook = GradebookAutoSaveEventHandler(self)
+            observer = Observer()
+
+            observer.schedule(event_handler_gradebook, os.path.join(os.getcwd(), "gradebook.db"))
+            observer.start()
 
         loop = asyncio.get_event_loop()
         loop.create_task(self.async_autosaving())
@@ -151,3 +174,24 @@ class Grading():
         <a id="btn_nbgrader" target="_blank" href="../formgrader" class="btn btn-primary">Open nbgrader</a>"""))
 
     # def save_results()
+
+    def download_file(self, file_id, location, filename=False):
+
+        # Make sure that the folder is available
+        if not os.path.exists(location):
+            os.makedirs(location)
+
+        response = requests.get(self.server_url + "/API/get_file/" + str(file_id), headers=self.headers)
+
+        if response.status_code == 200:
+            if not filename:
+                # Find the filename from the headers
+                d = response.headers['content-disposition']
+                filename = re.findall("filename=(.+)", d)[0]
+
+            open(location + "/" + filename, 'wb').write(response.content)
+            self.file_records[location + "/" + filename] = file_id
+        else:
+            print(response.content)
+            # raise Exception(response.content)
+
